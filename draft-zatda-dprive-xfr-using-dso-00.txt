@@ -134,9 +134,10 @@ Internet-Draft                XFR-using-DSO                    July 2019
    the zone over the connection.  Clients can choose to unSUBSCRIBE-XFR
    from zone updates at any time.
 
-   Servers can also use the DSO session to send command-style messages
+   Servers could also use the DSO session to send command-style messages
    to the client, for example, to instruct a client to stop serving a
-   zone or delete a zone.
+   zone or delete a zone.  No such commands are defined in this version
+   of the specification, but will probably be added in a future version.
 
 2.  Terminology
 
@@ -161,7 +162,6 @@ Internet-Draft                XFR-using-DSO                    July 2019
 
    o  Security.  For some network configurations it is not desirable to
       have port 53 on the secondary open to an untrusted network for the
-      sole purpose of receiving NOTIFYs.  NOTIFYs can also be trivially
 
 
 
@@ -170,6 +170,7 @@ Zhang, et al.            Expires January 9, 2020                [Page 3]
 Internet-Draft                XFR-using-DSO                    July 2019
 
 
+      sole purpose of receiving NOTIFYs.  NOTIFYs can also be trivially
       spoofed unless secured with TSIG.  For the DSO case, secondaries
       could initiate DSO connections to the primary and following that
       server-initiated DSO NOTIFY messages could be sent on that
@@ -217,7 +218,6 @@ Internet-Draft                XFR-using-DSO                    July 2019
    any zone for which the server is authoritative, it MUST respond
    authoritatively for queries on names falling within that zone both
    for normal DNS queries and for XuD subscriptions.  For names for
-   which the server is acting as a recursive resolver, e.g. when the
 
 
 
@@ -226,6 +226,7 @@ Zhang, et al.            Expires January 9, 2020                [Page 4]
 Internet-Draft                XFR-using-DSO                    July 2019
 
 
+   which the server is acting as a recursive resolver, e.g. when the
    server is the local recursive resolver, for any query for which it
    supports XuD subscriptions, it MUST also support standard queries.
 
@@ -271,7 +272,6 @@ Internet-Draft                XFR-using-DSO                    July 2019
 
    The XuD protocol is a session-oriented protocol, and makes use of DNS
    Stateful Operations (DSO) [RFC8490].
-
 
 
 
@@ -359,10 +359,11 @@ Internet-Draft                XFR-using-DSO                    July 2019
    has not yet cancelled using UNSUBSCRIBE-XFR.  In the SUBSCRIBE-XFR
    response the server MUST echo back the MESSAGE ID value unchanged.
 
-   The other header fields MUST be set as described in the DSO spec-
-   ification [RFC8490].  The DNS OPCODE field contains the OPCODE value
-   for DNS Stateful Operations (6).  The four count fields MUST be zero,
-   and the corresponding four sections MUST be empty (i.e., absent).
+   The other header fields MUST be set as described in the DSO
+   specification [RFC8490].  The DNS OPCODE field contains the OPCODE
+   value for DNS Stateful Operations (6).  The four count fields MUST be
+   zero, and the corresponding four sections MUST be empty (i.e.,
+   absent).
 
    The DSO-TYPE is SUBSCRIBE-XFR (tentatively 0x50).
 
@@ -373,7 +374,6 @@ Internet-Draft                XFR-using-DSO                    July 2019
    If the client has no copy of the zone it MUST omit the SOA value to
    indicate to the server that a DSO-AXFR is required in response (see
    the next section).
-
 
 
 
@@ -419,7 +419,7 @@ Internet-Draft                XFR-using-DSO                    July 2019
       +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+     > DSO-DATA
       |                     CLASS                     |    |
       +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+    |
-      |                     SOA                       |   /
+      |                   SOA value                   |   /
       +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+  /
 
    Figure 2: SUBSCRIBE-XFR Request
@@ -776,8 +776,8 @@ Internet-Draft                XFR-using-DSO                    July 2019
    MESSAGE ID field MUST be zero.  There is no server response to an
    UNSUBSCRIBE-XFR message.
 
-   The other header fields MUST be set as described in the DSO spec-
-   ification [RFC8490].  The DNS OPCODE field contains the OPCODE value
+   The other header fields MUST be set as described in the DSO
+   specification [RFC8490].  The DNS OPCODE field contains the OPCODE
 
 
 
@@ -786,8 +786,9 @@ Zhang, et al.            Expires January 9, 2020               [Page 14]
 Internet-Draft                XFR-using-DSO                    July 2019
 
 
-   for DNS Stateful Operations (6).  The four count fields MUST be zero,
-   and the corresponding four sections MUST be empty (i.e., absent).
+   value for DNS Stateful Operations (6).  The four count fields MUST be
+   zero, and the corresponding four sections MUST be empty (i.e.,
+   absent).
 
    The DSO-TYPE is UNSUBSCRIBE-XFR (tentatively 0x53).
 
@@ -816,7 +817,6 @@ Internet-Draft                XFR-using-DSO                    July 2019
    request had failed.  Because of this, servers MUST silently ignore
    UNSUBSCRIBE-XFR messages that do not match any currently active
    subscription.
-
 
 
 
@@ -867,7 +867,7 @@ Internet-Draft                XFR-using-DSO                    July 2019
    Figure 5: UNSUBSCRIBE-XFR Message
 
    QUESTION: Do we need the equivalent of a RECONFIRM message from DNS
-   PUSH Notifcations [I-D.ietf-dnssd-push]?
+   PUSH Notifications [I-D.ietf-dnssd-push]?
 
 7.4.  DNS Stateful Operations TLV Context Summary
 

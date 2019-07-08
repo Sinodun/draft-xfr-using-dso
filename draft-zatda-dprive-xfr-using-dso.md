@@ -105,9 +105,10 @@ client and server, the client can then subscribe to one more zones to be
 notified of changes and the server can push changes to the zone over the
 connection. Clients can choose to unSUBSCRIBE-XFR from zone updates at any time. 
 
-Servers can also use the DSO session to send command-style messages to the
+Servers could also use the DSO session to send command-style messages to the
 client, for example, to instruct a client to stop serving a zone or delete a
-zone.
+zone. No such commands are defined in this version of the specification, but
+will probably be added in a future version.
 
 # Terminology
 
@@ -283,7 +284,7 @@ used it for a subscription which it has not yet cancelled using
 UNSUBSCRIBE-XFR. In the SUBSCRIBE-XFR response the server MUST echo back the
 MESSAGE ID value unchanged.
 
-The other header fields MUST be set as described in the DSO spec- ification
+The other header fields MUST be set as described in the DSO specification
 [RFC8490]. The DNS OPCODE field contains the OPCODE value for DNS Stateful
 Operations (6). The four count fields MUST be zero, and the corresponding
 four sections MUST be empty (i.e., absent).
@@ -324,7 +325,7 @@ the server that a DSO-AXFR is required in response (see the next section).
      +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+     > DSO-DATA
      |                     CLASS                     |    |
      +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+    |
-     |                     SOA                       |   /
+     |                   SOA value                   |   /
      +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+  /
 ---
 Figure 2: SUBSCRIBE-XFR Request
@@ -613,7 +614,7 @@ UNSUBSCRIBE-XFR message is illustrated in Figure 5.
 In accordance with the definition of DSO unidirectional messages, the MESSAGE ID
 field MUST be zero. There is no server response to an UNSUBSCRIBE-XFR message.
 
-The other header fields MUST be set as described in the DSO spec- ification
+The other header fields MUST be set as described in the DSO specification
 [RFC8490]. The DNS OPCODE field contains the OPCODE value for DNS Stateful
 Operations (6). The four count fields MUST be zero, and the corresponding four
 sections MUST be empty (i.e., absent).
@@ -670,7 +671,7 @@ Figure 5: UNSUBSCRIBE-XFR Message
 
 
 QUESTION: Do we need the equivalent of a RECONFIRM message from DNS PUSH
-Notifcations [@!I-D.ietf-dnssd-push]?
+Notifications [@!I-D.ietf-dnssd-push]?
 
 ## DNS Stateful Operations TLV Context Summary
 

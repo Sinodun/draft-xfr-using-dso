@@ -524,7 +524,7 @@
 <p><a href="#I-D.hzpa-dprive-xfr-over-tls">[I-D.hzpa-dprive-xfr-over-tls]</a> enumerates the existing issues with clear text XFR mechanisms, outlines some use cases for using encrypted channels for zone transfer and also describes using TLS for zone transfers. It additionally discusses the various authentication mechanisms that can be used to provide data and channel authentication, and channel confidentiality.  </p>
 <p id="rfc.section.1.p.2">This draft describes the use of a DSO <a href="#RFC8490">[RFC8490]</a> based protocol to perform zone transfers. This mechanism is heavily based on an existing use of DSO where DNS clients can subscribe to receive asynchronous notifications of changes to RRSets of interest: DNS PUSH Notifications <a href="#I-D.ietf-dnssd-push">[I-D.ietf-dnssd-push]</a>. That specification was developed with DNS Service Discovery in mind, this document describes an analogous protocol (XFR-using-DSO) where DNS clients can subscribe to receive asynchronous notifications of changes to zones of interest, it is developed with efficient and confidential zone transfers between primaries and secondaries in mind.  </p>
 <p id="rfc.section.1.p.3">In the XFR-using-DSO model, a DSO connection is first opened between the client and server, the client can then subscribe to one more zones to be notified of changes and the server can push changes to the zone over the connection. Clients can choose to unSUBSCRIBE-XFR from zone updates at any time.  </p>
-<p id="rfc.section.1.p.4">Servers can also use the DSO session to send command-style messages to the client, for example, to instruct a client to stop serving a zone or delete a zone.  </p>
+<p id="rfc.section.1.p.4">Servers could also use the DSO session to send command-style messages to the client, for example, to instruct a client to stop serving a zone or delete a zone. No such commands are defined in this version of the specification, but will probably be added in a future version.  </p>
 <h1 id="rfc.section.2"><a href="#rfc.section.2">2.</a> <a href="#terminology" id="terminology">Terminology</a></h1>
 <p id="rfc.section.2.p.1">The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and "OPTIONAL" in this document are to be interpreted as described in BCP 14 <a href="#RFC2119">[RFC2119]</a> and <a href="#RFC8174">[RFC8174]</a> when, and only when, they appear in all capitals, as shown here.  </p>
 <p id="rfc.section.2.p.2">Privacy terminology is as described in Section 3 of <a href="#RFC6973">[RFC6973]</a>.  </p>
@@ -572,7 +572,7 @@
 <h1 id="rfc.section.7.1.1"><a href="#rfc.section.7.1.1">7.1.1.</a> <a href="#subscribexfr-request" id="subscribexfr-request">SUBSCRIBE-XFR Request</a></h1>
 <p id="rfc.section.7.1.1.p.1">A SUBSCRIBE-XFR request begins with the standard DSO 12-byte header [RFC8490], followed by the SUBSCRIBE-XFR primary TLV. A SUBSCRIBE-XFR request message is illustrated in Figure 2.  </p>
 <p id="rfc.section.7.1.1.p.2">The MESSAGE ID field MUST be set to a unique value, that the client is not using for any other active operation on this DSO session. For the purposes here, a MESSAGE ID is in use on this session if the client has used it in a request for which it has not yet received a response, or if the client has used it for a subscription which it has not yet cancelled using UNSUBSCRIBE-XFR. In the SUBSCRIBE-XFR response the server MUST echo back the MESSAGE ID value unchanged.  </p>
-<p id="rfc.section.7.1.1.p.3">The other header fields MUST be set as described in the DSO spec- ification [RFC8490]. The DNS OPCODE field contains the OPCODE value for DNS Stateful Operations (6). The four count fields MUST be zero, and the corresponding four sections MUST be empty (i.e., absent).  </p>
+<p id="rfc.section.7.1.1.p.3">The other header fields MUST be set as described in the DSO specification [RFC8490]. The DNS OPCODE field contains the OPCODE value for DNS Stateful Operations (6). The four count fields MUST be zero, and the corresponding four sections MUST be empty (i.e., absent).  </p>
 <p id="rfc.section.7.1.1.p.4">The DSO-TYPE is SUBSCRIBE-XFR (tentatively 0x50).  </p>
 <p id="rfc.section.7.1.1.p.5">The DSO-LENGTH is the length of the DSO-DATA that follows, which specifies the name and class of the zone and optionally the SOA value of the client's version of the zone.  </p>
 <p id="rfc.section.7.1.1.p.6">If the client has no copy of the zone it MUST omit the SOA value to indicate to the server that a DSO-AXFR is required in response (see the next section).  </p>
@@ -602,7 +602,7 @@
  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+     &gt; DSO-DATA
  |                     CLASS                     |    |
  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+    |
- |                     SOA                       |   /
+ |                   SOA value                   |   /
  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+  /
 </pre>
 <p id="rfc.section.7.1.1.p.7">Figure 2: SUBSCRIBE-XFR Request </p>
@@ -781,7 +781,7 @@
 <h1 id="rfc.section.7.3.1"><a href="#rfc.section.7.3.1">7.3.1.</a> <a href="#unsubscribexfr-message" id="unsubscribexfr-message">UNSUBSCRIBE-XFR Message</a></h1>
 <p id="rfc.section.7.3.1.p.1">An UNSUBSCRIBE-XFR unidirectional message begins with the standard DSO 12-byte header [RFC8490], followed by the UNSUBSCRIBE-XFR primary TLV. An UNSUBSCRIBE-XFR message is illustrated in Figure 5.  </p>
 <p id="rfc.section.7.3.1.p.2">In accordance with the definition of DSO unidirectional messages, the MESSAGE ID field MUST be zero. There is no server response to an UNSUBSCRIBE-XFR message.  </p>
-<p id="rfc.section.7.3.1.p.3">The other header fields MUST be set as described in the DSO spec- ification [RFC8490]. The DNS OPCODE field contains the OPCODE value for DNS Stateful Operations (6). The four count fields MUST be zero, and the corresponding four sections MUST be empty (i.e., absent).  </p>
+<p id="rfc.section.7.3.1.p.3">The other header fields MUST be set as described in the DSO specification [RFC8490]. The DNS OPCODE field contains the OPCODE value for DNS Stateful Operations (6). The four count fields MUST be zero, and the corresponding four sections MUST be empty (i.e., absent).  </p>
 <p id="rfc.section.7.3.1.p.4">The DSO-TYPE is UNSUBSCRIBE-XFR (tentatively 0x53).  </p>
 <p id="rfc.section.7.3.1.p.5">The DSO-LENGTH field contains the value 2, the length of the 2-octet MESSAGE ID contained in the DSO-DATA.  </p>
 <p id="rfc.section.7.3.1.p.6">The DSO-DATA contains the value given in the MESSAGE ID field of an active SUBSCRIBE-XFR request. This is how the server knows which SUBSCRIBE-XFR request is being cancelled. After receipt of the UNSUBSCRIBE-XFR message, the SUBSCRIBE-XFR request is no longer active.  </p>
@@ -811,7 +811,7 @@
   +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+  /
 </pre>
 <p id="rfc.section.7.3.1.p.9">Figure 5: UNSUBSCRIBE-XFR Message </p>
-<p id="rfc.section.7.3.1.p.10">QUESTION: Do we need the equivalent of a RECONFIRM message from DNS PUSH Notifcations <a href="#I-D.ietf-dnssd-push">[I-D.ietf-dnssd-push]</a>? </p>
+<p id="rfc.section.7.3.1.p.10">QUESTION: Do we need the equivalent of a RECONFIRM message from DNS PUSH Notifications <a href="#I-D.ietf-dnssd-push">[I-D.ietf-dnssd-push]</a>? </p>
 <h1 id="rfc.section.7.4"><a href="#rfc.section.7.4">7.4.</a> <a href="#dns-stateful-operations-tlv-context-summary" id="dns-stateful-operations-tlv-context-summary">DNS Stateful Operations TLV Context Summary</a></h1>
 <p id="rfc.section.7.4.p.1">This document defines four new DSO TLVs. As suggested in Section 8.2 of the DNS Stateful Operations specification [RFC8490], the valid contexts of these new TLV types are summarized below.  </p>
 <p id="rfc.section.7.4.p.2">The client TLV contexts are: </p>
