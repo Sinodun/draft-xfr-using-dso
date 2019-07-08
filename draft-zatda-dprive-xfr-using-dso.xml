@@ -133,14 +133,14 @@ efficient and confidential zone transfers between primaries and secondaries in
 mind.
 </t>
 <t>In the XFR-using-DSO model, a DSO connection is first opened between the
-client and server, the client can then subscribe to one more zones to be
-notified of changes and the server can push changes to the zone over the
-connection. Clients can choose to unSUBSCRIBE-XFR from zone updates at any time.
+client and server, the client can then subscribe to one or more zones to be
+notified of changes and the server can publish changes to the zone over the
+connection. Clients can choose to unsubscribe from zone updates at any time.
 </t>
 <t>Servers could also use the DSO session to send command-style messages to the
 client, for example, to instruct a client to stop serving a zone or delete a
 zone. No such commands are defined in this version of the specification, but
-will probably be added in a future version.
+will likely be added in a future version.
 </t>
 </section>
 
@@ -154,6 +154,9 @@ document are to be interpreted as described in BCP 14 <xref target="RFC2119"/> a
 </t>
 <t>DNS terminology is as described in <xref target="RFC8499"/>.
 </t>
+<t>Note that in this document we choose to use the terms 'primary' and 'secondary'
+for two servers engaged in zone transfers.
+</t>
 <t>DoT: DNS-over-TLS as specified in <xref target="RFC7858"/>
 </t>
 <t>XuD: XFR-using-DOS mechanisms as specified in this document
@@ -165,6 +168,9 @@ document are to be interpreted as described in BCP 14 <xref target="RFC2119"/> a
 </t>
 <t>
 <list style="symbols">
+<t>Confidentiality. Since this mechanism could, in principle, eliminate the need
+for NOTIFY and SOA queries it can provide complete confidentiality for the
+entire zone transfer mechanism.</t>
 <t>Security. For some network configurations it is not desirable to have port 53
 on the secondary open to an untrusted network for the sole purpose of
 receiving NOTIFYs. NOTIFYs can also be trivially spoofed unless secured with
@@ -186,16 +192,17 @@ used to gracefully cancel AXFRs.</t>
 <t>New command channel. For the DSO case it would be possible to include new
 server-initiated 'control' commands e.g. 'stop serving this zone', 'delete
 this zone'.</t>
-<t>QUESTION: Is there any case where the primary might want to initiate the DSO
-connection to the secondary?</t>
 </list>
+</t>
+<t>QUESTION: Is there any case where the primary might want to initiate the DSO
+connection to the secondary?
 </t>
 </section>
 
 <section anchor="overview" title="Overview">
 <t>The figure below provides an outline of the XuD protocol.
 </t>
-<t><eref target="https://docs.google.com/drawings/d/1Jny_OFFXbazhtSAaCMak7nmBzhdzYpywkWz33IkrD7g/edit?usp=sharing">Figure 1: XuD protocol</eref>
+<t><eref target="https://github.com/Sinodun/draft-xfr-using-dso/blob/master/draft-01-svg/XuD_Protocol.svg">Figure 1: XuD protocol</eref>
 </t>
 <t>A DNS XuD client subscribes for zone notifications for a particular zone by
 connecting to the appropriate authoritative server for that zone, and sending
@@ -235,6 +242,9 @@ seconds by default) [RFC8490].
 <t>The connection for XuD SHOULD be established using port 853, as specified in
 <xref target="RFC7858"/>, unless there is mutual agreement between the secondary and primary
 to use a port other than port 853 for XuD.
+</t>
+<t>QUESTION: Is there a use case to allow XuD over TCP where confidentiality is not
+an issue e.g when the zone contents are already publicly available?
 </t>
 </section>
 
@@ -277,7 +287,7 @@ relevant asynchronous XuD notifications to the client. Note that a client MUST
 be prepared to receive (and silently ignore) XuD notifications for subscriptions
 it has previously removed, since there is no way to prevent the situation where
 a XuD notification is in flight from server to client while the client's
-UNSUBSCRIBE-XFR message cancelling that subscription is simultaneously in flight
+unsubscribe message cancelling that subscription is simultaneously in flight
 from client to server.
 </t>
 
@@ -300,9 +310,9 @@ should immediately abort the connection with a TLS close_notify alert. See
 Section 6.1 of [RFC8446].
 </t>
 <t>TODO: Need to define a DSO version of TSIG to cover the SUBSCRIBE-XFR and
-DSO-<spanx style="emph">XFR responses, since the Additional section count in DSO message MUST be
+DSO-XFR responses, since the Additional section count in DSO message MUST be
 zero. Note the client only needs to use TSIG in the SUBSCRIBE-XFR message to
-prove it is authorised to request zone transfers, but all DSO-</spanx>XFR messages
+prove it is authorised to request zone transfers, but all DSO-XFR messages
 should be signed if primary TSIG is required for the authentication model in
 use.
 </t>
@@ -614,7 +624,7 @@ follow the DNS Header in an IXFR message.
 MUST validate that the zone being updated correspond with at least one currently
 active subscription on that session. Specifically, the SOA name and CLASS MUST
 match the SOA name and CLASS given in a SUBSCRIBE-XFR request, subject to the
-usual established DNS case- insensitivity for US-ASCII letters.
+usual established DNS case-insensitivity for US-ASCII letters.
 </t>
 </section>
 
@@ -722,6 +732,21 @@ Notifications <xref target="I-D.ietf-dnssd-push"/>?
 </section>
 </section>
 
+<section anchor="authentication" title="Authentication">
+<t>The authentication considerations are largely the same as those presented in
+<xref target="I-D.hzpa-dprive-xfr-over-tls"/>.
+</t>
+</section>
+
+<section anchor="multiprimary-configurations" title="Multi-primary configurations">
+<t>The multi-primary considerations share some of the same issues as those
+presented in <xref target="I-D.hzpa-dprive-xfr-over-tls"/> but are different because the
+client is not performing SOA queries.
+</t>
+<t>TODO: More detail required here.
+</t>
+</section>
+
 <section anchor="dns-stateful-operations-tlv-context-summary" title="DNS Stateful Operations TLV Context Summary">
 <t>This document defines four new DSO TLVs. As suggested in Section 8.2 of the DNS
 Stateful Operations specification [RFC8490], the valid contexts of these new TLV
@@ -810,11 +835,6 @@ recorded in the IANA DSO Type Code Registry.
 </section>
 
 <section anchor="implementation-status" title="Implementation Status">
-<t>TBD
-</t>
-</section>
-
-<section anchor="iana-considerations-1" title="IANA Considerations">
 <t>TBD
 </t>
 </section>

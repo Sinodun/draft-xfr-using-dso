@@ -101,14 +101,14 @@ efficient and confidential zone transfers between primaries and secondaries in
 mind.
 
 In the XFR-using-DSO model, a DSO connection is first opened between the
-client and server, the client can then subscribe to one more zones to be
-notified of changes and the server can push changes to the zone over the
-connection. Clients can choose to unSUBSCRIBE-XFR from zone updates at any time. 
+client and server, the client can then subscribe to one or more zones to be
+notified of changes and the server can publish changes to the zone over the
+connection. Clients can choose to unsubscribe from zone updates at any time. 
 
 Servers could also use the DSO session to send command-style messages to the
 client, for example, to instruct a client to stop serving a zone or delete a
 zone. No such commands are defined in this version of the specification, but
-will probably be added in a future version.
+will likely be added in a future version.
 
 # Terminology
 
@@ -121,6 +121,9 @@ Privacy terminology is as described in Section 3 of [@!RFC6973].
 
 DNS terminology is as described in [@!RFC8499].
 
+Note that in this document we choose to use the terms 'primary' and 'secondary'
+for two servers engaged in zone transfers.
+
 DoT: DNS-over-TLS as specified in [@!RFC7858]
 
 XuD: XFR-using-DOS mechanisms as specified in this document
@@ -128,6 +131,10 @@ XuD: XFR-using-DOS mechanisms as specified in this document
 # Use Cases for XFR-using-DSO
 
 This section includes additional use cases in addition to those specified in [@!I-D.hzpa-dprive-xfr-over-tls] that XuD can offer.
+
+* Confidentiality. Since this mechanism could, in principle, eliminate the need
+  for NOTIFY and SOA queries it can provide complete confidentiality for the
+  entire zone transfer mechanism.
 
 * Security. For some network configurations it is not desirable to have port 53
   on the secondary open to an untrusted network for the sole purpose of
@@ -154,15 +161,15 @@ This section includes additional use cases in addition to those specified in [@!
   server-initiated 'control' commands e.g. 'stop serving this zone', 'delete
   this zone'.
 
-* QUESTION: Is there any case where the primary might want to initiate the DSO
-  connection to the secondary?
+QUESTION: Is there any case where the primary might want to initiate the DSO
+connection to the secondary?
 
 # Overview
 
 The figure below provides an outline of the XuD protocol.
 
 [Figure 1: XuD protocol]
-(https://docs.google.com/drawings/d/1Jny_OFFXbazhtSAaCMak7nmBzhdzYpywkWz33IkrD7g/edit?usp=sharing)
+(https://github.com/Sinodun/draft-xfr-using-dso/blob/master/draft-01-svg/XuD_Protocol.svg)
 
 A DNS XuD client subscribes for zone notifications for a particular zone by
 connecting to the appropriate authoritative server for that zone, and sending
@@ -201,6 +208,9 @@ XuD clients MUST use DNS Stateful Operations [RFC8490] running over TLS over TCP
 The connection for XuD SHOULD be established using port 853, as specified in
 [@!RFC7858], unless there is mutual agreement between the secondary and primary
 to use a port other than port 853 for XuD.
+
+QUESTION: Is there a use case to allow XuD over TCP where confidentiality is not
+an issue e.g when the zone contents are already publicly available?
 
 #  State Considerations
 
@@ -241,7 +251,7 @@ relevant asynchronous XuD notifications to the client. Note that a client MUST
 be prepared to receive (and silently ignore) XuD notifications for subscriptions
 it has previously removed, since there is no way to prevent the situation where
 a XuD notification is in flight from server to client while the client's
-UNSUBSCRIBE-XFR message cancelling that subscription is simultaneously in flight
+unsubscribe message cancelling that subscription is simultaneously in flight
 from client to server.
 
 ## XuD SUBSCRIBE-XFR
@@ -264,9 +274,9 @@ should immediately abort the connection with a TLS close_notify alert. See
 Section 6.1 of [RFC8446].
 
 TODO: Need to define a DSO version of TSIG to cover the SUBSCRIBE-XFR and
-DSO-*XFR responses, since the Additional section count in DSO message MUST be
+DSO-XFR responses, since the Additional section count in DSO message MUST be
 zero. Note the client only needs to use TSIG in the SUBSCRIBE-XFR message to
-prove it is authorised to request zone transfers, but all DSO-*XFR messages
+prove it is authorised to request zone transfers, but all DSO-XFR messages
 should be signed if primary TSIG is required for the authentication model in
 use.
 
@@ -571,7 +581,7 @@ When processing the records received in a DSO-IXFR Message, the receiving client
 MUST validate that the zone being updated correspond with at least one currently
 active subscription on that session. Specifically, the SOA name and CLASS MUST
 match the SOA name and CLASS given in a SUBSCRIBE-XFR request, subject to the
-usual established DNS case- insensitivity for US-ASCII letters.
+usual established DNS case-insensitivity for US-ASCII letters.
 
 ### Fallback to AXFR
 
@@ -673,6 +683,19 @@ Figure 5: UNSUBSCRIBE-XFR Message
 QUESTION: Do we need the equivalent of a RECONFIRM message from DNS PUSH
 Notifications [@!I-D.ietf-dnssd-push]?
 
+## Authentication
+
+The authentication considerations are largely the same as those presented in
+[@!I-D.hzpa-dprive-xfr-over-tls].
+
+## Multi-primary configurations
+
+The multi-primary considerations share some of the same issues as those
+presented in [@!I-D.hzpa-dprive-xfr-over-tls] but are different because the
+client is not performing SOA queries.
+
+TODO: More detail required here.
+
 ## DNS Stateful Operations TLV Context Summary
 
 This document defines four new DSO TLVs. As suggested in Section 8.2 of the DNS
@@ -750,9 +773,6 @@ TBD
 
 TBD
 
-# IANA Considerations
-
-TBD
 
 # Security Considerations
 
