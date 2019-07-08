@@ -125,7 +125,7 @@ and channel authentication, and channel confidentiality.
 <t>This draft describes the use of a DSO <xref target="RFC8490"/> based protocol to perform zone
 transfers. This mechanism is heavily based on an existing use of DSO where DNS
 clients can subscribe to receive asynchronous notifications of changes to RRSets
-of interest: XuDs <xref target="I-D.ietf-dnssd-push"/>. That specification
+of interest: DNS PUSH Notifications <xref target="I-D.ietf-dnssd-push"/>. That specification
 was developed with DNS Service Discovery in mind, this document describes an
 analogous protocol (XFR-using-DSO) where DNS clients can subscribe to receive
 asynchronous notifications of changes to zones of interest, it is developed with
@@ -194,7 +194,7 @@ connection to the secondary?</t>
 <section anchor="overview" title="Overview">
 <t>The figure below provides an outline of the XuD protocol.
 </t>
-<t><eref target="https://docs.google.com/drawings/d/1Jny_OFFXbazhtSAaCMak7nmBzhdzYpywkWz33IkrD7g/edit?usp=sharing">Figure 4: XuD protocol</eref>
+<t><eref target="https://docs.google.com/drawings/d/1Jny_OFFXbazhtSAaCMak7nmBzhdzYpywkWz33IkrD7g/edit?usp=sharing">Figure 1: XuD protocol</eref>
 </t>
 <t>A DNS XuD client subscribes for zone notifications for a particular zone by
 connecting to the appropriate authoritative server for that zone, and sending
@@ -298,11 +298,18 @@ DSO session initiated by a client, this is a fatal error and the client
 should immediately abort the connection with a TLS close_notify alert. See
 Section 6.1 of [RFC8446].
 </t>
+<t>TODO: Need to define a DSO version of TSIG to cover the SUBSCRIBE-XFR and
+DSO-<spanx style="emph">XFR responses, since the Additional section count in DSO message MUST be
+zero. Note the client only needs to use TSIG in the SUBSCRIBE-XFR message to
+prove it is authorised to request zone transfers, but all DSO-</spanx>XFR messages
+should be signed if primary TSIG is required for the authentication model in
+use.
+</t>
 
 <section anchor="subscribexfr-request" title="SUBSCRIBE-XFR Request">
 <t>A SUBSCRIBE-XFR request begins with the standard DSO 12-byte header
 [RFC8490], followed by the SUBSCRIBE-XFR primary TLV. A SUBSCRIBE-XFR request
-message is illustrated in Figure 1.
+message is illustrated in Figure 2.
 </t>
 <t>The MESSAGE ID field MUST be set to a unique value, that the client is not
 using for any other active operation on this DSO session. For the purposes
@@ -320,8 +327,11 @@ four sections MUST be empty (i.e., absent).
 <t>The DSO-TYPE is SUBSCRIBE-XFR (tentatively 0x50).
 </t>
 <t>The DSO-LENGTH is the length of the DSO-DATA that follows, which specifies the
-name and class of the zone and the SOA value of the client's version of the
-zone.
+name and class of the zone and optionally the SOA value of the client's version
+of the zone.
+</t>
+<t>If the client has no copy of the zone it MUST omit the SOA value to indicate to
+the server that a DSO-AXFR is required in response (see the next section).
 </t>
 
 <figure align="center"><artwork align="center">
@@ -353,7 +363,7 @@ zone.
  |                     SOA                       |   /
  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+  /
 </artwork></figure>
-<t>Figure 1: SUBSCRIBE-XFR Request
+<t>Figure 2: SUBSCRIBE-XFR Request
 </t>
 <t>The DSO-DATA for a SUBSCRIBE-XFR request MUST contain exactly one NAME, CLASS
 and SOA value. Since SUBSCRIBE-XFR requests are sent over TCP, multiple
@@ -386,7 +396,7 @@ containing wildcards are considered an error (see below).
 
 <section anchor="subscribexfr-response" title="SUBSCRIBE-XFR Response">
 <t>Each SUBSCRIBE-XFR request generates exactly one SUBSCRIBE-XFR response from the
-server.
+server. A SUBSCRIBE-XFR request message is illustrated in Figure 3.
 </t>
 <t>A SUBSCRIBE-XFR response begins with the standard DSO 12-byte header
 [RFC8490]. The QR bit in the header is set indicating it is a response. The
@@ -420,7 +430,7 @@ silently ignored.
   |             ARCOUNT (MUST BE ZERO)            |   /
   +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+  /
 </artwork></figure>
-<t>Figure 2: SUBSCRIBE-XFR Response Message
+<t>Figure 3: SUBSCRIBE-XFR Response Message
 </t>
 <t>In the SUBSCRIBE-XFR response the RCODE indicates whether or not the
 subscription was accepted. Supported RCODEs are as follows:
@@ -531,14 +541,266 @@ handle both cases.
 <t>Once a subscription has been successfully established, the server generates
 DSO-IXFR messages to send to the client as appropriate. In the case that the
 server could not provide a DSO-IXFR message based on the SOA received from the
-clien an initial DSO-AXFR message will be sent immediately following the
+client an initial DSO-AXFR message will be sent immediately following the
 SUBSCRIBE-XFR Response. Subsequent changes to the zone are then communicated to
 the client in subsequent DSO-IXFR messages.
 </t>
+<t>Until an UNSUBSCRIBE-XFR message is received the server MUST assume that the
+client is updating the client's version of the zone with the notifications sent
+and can therefore hold state on the SOA version the client holds. It MUST use
+this to generate the DSO-IXFR messages sent on a XuD session.
+</t>
+
+<section anchor="dsoixfr-message" title="DSO-IXFR Message">
+<t>A DSO-IXFR unidirectional message begins with the standard DSO 12-byte header
+[RFC8490], followed by the DSO-IXFR primary TLV. A DSO-IXFR message is
+illustrated in Figure 4.
+</t>
+<t>In accordance with the definition of DSO unidirectional messages, the MESSAGE ID
+field MUST be zero. There is no client response to a DSO-IXFR message.
+</t>
+<t>The other header fields MUST be set as described in the DSO specification
+[RFC8490]. The DNS OPCODE field contains the OPCODE value for DNS Stateful
+Operations (6). The four count fields MUST be zero, and the corresponding four
+sections MUST be empty (i.e., absent).
+</t>
+<t>The DSO-TYPE is DSO-IXFR (tentatively 0x51).
+</t>
+<t>The DSO-LENGTH is the length of the DSO-DATA that follows, which specifies the
+changes being communicated.
+</t>
+<t>The DSO-DATA contains one or more change notifications. A DSO-IXFR Message MUST
+contain at least one change notification. If a DSO-IXFR Message is received that
+contains no change notifications, this is a fatal error, and the receiver MUST
+immediately terminate the connection with a TLS close_notify alert.
+</t>
+
+<figure align="center"><artwork align="center">
+                                 1  1  1  1  1  1
+   0  1  2  3  4  5  6  7  8  9  0  1  2  3  4  5
+ +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+  \
+ |           MESSAGE ID (MUST BE ZERO)           |   \
+ +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+    |
+ |QR| OPCODE(6) |         Z          |   RCODE   |    |
+ +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+    |
+ |             QDCOUNT (MUST BE ZERO)            |    |
+ +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+     &gt; HEADER
+ |             ANCOUNT (MUST BE ZERO)            |    |
+ +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+    |
+ |             NSCOUNT (MUST BE ZERO)            |    |
+ +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+    |
+ |             ARCOUNT (MUST BE ZERO)            |   /
+ +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+  /
+ |      DSO-TYPE = DSO-IXFR (tentatively 0x51)   |
+ +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+ |   DSO-LENGTH (number of octets in DSO-DATA)   |
+ +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+  \
+ |                                               |   \
+ |                                               |    |
+ |            IXFR BODY AS PER RFC1995           |     &gt; DSO-DATA
+ |                                               |    |
+ |                                               |   /
+ +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+  /
+</artwork></figure>
+<t>Figure 4: DSO-IXFR Message
+</t>
+<t>The DSO-DATA in a DSO-IXFR message is identical to the contents of a <xref target="RFC1995"/>
+IXFR message that would be sent to communicate the same zone incremental zone
+transfer over UDP or TCP i.e. the set of one or more difference sequences that
+follow the DNS Header in an IXFR message.
+</t>
+<t>When processing the records received in a DSO-IXFR Message, the receiving client
+MUST validate that the zone being updated correspond with at least one currently
+active subscription on that session. Specifically, the SOA name and CLASS MUST
+match the SOA name and CLASS given in a SUBSCRIBE-XFR request, subject to the
+usual established DNS case- insensitivity for US-ASCII letters.
+</t>
+</section>
 
 <section anchor="fallback-to-axfr" title="Fallback to AXFR">
+<t>The format of the DSO-AXFR message is a standard DSO header with DSO-TYPE of
+DSO-AXFR (tentatively DSO Type Code 0x52) and the body is identical to a
+<xref target="RFC5936"/> AXFR response body.
+</t>
+<t>TODO: More detail here.
+</t>
+<t>If the SUBSCRIBE-XFR message contained no SOA value, the server MUST send a
+DSO-AXFR message as its first message on the connection.
+</t>
+<t>Alternatively if incremental zone transfer is not available, the entire zone MAY
+be returned in a DSO-AXFR message.
+</t>
+<t>QUESTION: Should we bother with a separate DSO-AXFR message or just allow full
+zone transfer inside the DSO-IXFR message as with <xref target="RFC1995"/> IXFR? A separate
+message type makes is more explicit and IXFR was constrained by having to
+respond to a IXFR request.
+</t>
 </section>
 </section>
+
+<section anchor="xud-unsubscribexfr" title="XuD UNSUBSCRIBE-XFR">
+<t>To cancel an individual subscription without closing the entire DSO session, the
+client sends an UNSUBSCRIBE-XFR message over the established DSO session to the
+server. The UNSUBSCRIBE-XFR message is encoded as a DSO unidirectional message
+[RFC8490]. This specification defines a primary unidirectional DSO TLV for XuD
+UNSUBSCRIBE-XFR Messages (tentatively DSO Type Code 0x53).
+</t>
+<t>A server MUST NOT initiate an UNSUBSCRIBE-XFR message. If a server does send an
+UNSUBSCRIBE-XFR message over a DSO session initiated by a client, this is a
+fatal error and the client should immediately abort the connection with a TLS
+close_notify alert.
+</t>
+
+<section anchor="unsubscribexfr-message" title="UNSUBSCRIBE-XFR Message">
+<t>An UNSUBSCRIBE-XFR unidirectional message begins with the standard DSO 12-byte
+header [RFC8490], followed by the UNSUBSCRIBE-XFR primary TLV. An
+UNSUBSCRIBE-XFR message is illustrated in Figure 5.
+</t>
+<t>In accordance with the definition of DSO unidirectional messages, the MESSAGE ID
+field MUST be zero. There is no server response to an UNSUBSCRIBE-XFR message.
+</t>
+<t>The other header fields MUST be set as described in the DSO spec- ification
+[RFC8490]. The DNS OPCODE field contains the OPCODE value for DNS Stateful
+Operations (6). The four count fields MUST be zero, and the corresponding four
+sections MUST be empty (i.e., absent).
+</t>
+<t>The DSO-TYPE is UNSUBSCRIBE-XFR (tentatively 0x53).
+</t>
+<t>The DSO-LENGTH field contains the value 2, the length of the 2-octet MESSAGE ID
+contained in the DSO-DATA.
+</t>
+<t>The DSO-DATA contains the value given in the MESSAGE ID field of an active
+SUBSCRIBE-XFR request. This is how the server knows which SUBSCRIBE-XFR request
+is being cancelled. After receipt of the UNSUBSCRIBE-XFR message, the
+SUBSCRIBE-XFR request is no longer active.
+</t>
+<t>It is allowable for the client to issue an UNSUBSCRIBE-XFR message for a
+previous SUBSCRIBE-XFR request for which the client has not yet received a
+SUBSCRIBE-XFR response. This is to allow for the case where a client starts and
+stops a subscription in less than the round-trip time to the server. The client
+is NOT required to wait for the SUBSCRIBE-XFR response before issuing the
+UNSUBSCRIBE-XFR message.
+</t>
+<t>Consequently, it is possible for a server to receive an UNSUBSCRIBE-XFR message
+that does not match any currently active subscription. This can occur when a
+client sends a SUBSCRIBE-XFR request, which subsequently fails and returns an
+error code, but the client sent an UNSUBSCRIBE-XFR message before it became
+aware that the SUBSCRIBE-XFR request had failed. Because of this, servers MUST
+silently ignore UNSUBSCRIBE-XFR messages that do not match any currently active
+subscription.
+</t>
+
+<figure align="center"><artwork align="center">
+                                  1  1  1  1  1  1
+    0  1  2  3  4  5  6  7  8  9  0  1  2  3  4  5
+  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+  \
+  |           MESSAGE ID (MUST BE ZERO)           |   \
+  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+    |
+  |QR| OPCODE(6) |         Z          |   RCODE   |    |
+  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+    |
+  |             QDCOUNT (MUST BE ZERO)            |    |
+  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+     &gt; HEADER
+  |             ANCOUNT (MUST BE ZERO)            |    |
+  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+    |
+  |             NSCOUNT (MUST BE ZERO)            |    |
+  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+    |
+  |             ARCOUNT (MUST BE ZERO)            |   /
+  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+  /
+  | DSO-TYPE = UNSUBSCRIBE-XFR (tentatively 0x53) |
+  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+  |                DSO-LENGTH (2)                 |
+  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+  \
+  |              SUBSCRIBE-XFR MESSAGE ID             |   &gt; DSO-DATA
+  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+  /
+</artwork></figure>
+<t>Figure 5: UNSUBSCRIBE-XFR Message
+</t>
+<t>QUESTION: Do we need the equivalent of a RECONFIRM message from DNS PUSH
+Notifcations <xref target="I-D.ietf-dnssd-push"/>?
+</t>
+</section>
+</section>
+
+<section anchor="dns-stateful-operations-tlv-context-summary" title="DNS Stateful Operations TLV Context Summary">
+<t>This document defines four new DSO TLVs. As suggested in Section 8.2 of the DNS
+Stateful Operations specification [RFC8490], the valid contexts of these new TLV
+types are summarized below.
+</t>
+<t>The client TLV contexts are:
+</t>
+<t>C-P:  Client request message, primary TLV
+</t>
+<t>C-U:  Client unidirectional message, primary TLV
+</t>
+<t>C-A:  Client request or unidirectional message, additional TLV
+</t>
+<t>CRP:  Response back to client, primary TLV
+</t>
+<t>CRA:  Response back to client, additional TLV
+</t>
+<texttable>
+<ttcol align="left">TLV Type</ttcol>
+<ttcol align="left">C-P</ttcol>
+<ttcol align="left">C-U</ttcol>
+<ttcol align="left">C-A</ttcol>
+<ttcol align="left">CRP</ttcol>
+<ttcol align="left">CRA</ttcol>
+
+<c>SUBSCRIBE-XFR</c><c>X</c><c></c><c></c><c></c><c></c>
+<c>DSO-IXFR</c><c></c><c></c><c></c><c></c><c></c>
+<c>DSO-AXFR</c><c></c><c></c><c></c><c></c><c></c>
+<c>UNSUBSCRIBE-XFR</c><c></c><c>X</c><c></c><c></c><c></c>
+</texttable>
+<t>Table 2: DSO TLV Client Context Summary
+</t>
+<t>The server TLV contexts are:
+</t>
+<t>S-P:  Server request message, primary TLV
+</t>
+<t>S-U:  Server unidirectional message, primary TLV
+</t>
+<t>S-A:  Server request or unidirectional message, additional TLV
+</t>
+<t>SRP:  Response back to server, primary TLV
+</t>
+<t>SRA:  Response back to server, additional TLV
+</t>
+<texttable>
+<ttcol align="left">TLV Type</ttcol>
+<ttcol align="center">S-P</ttcol>
+<ttcol align="center">S-U</ttcol>
+<ttcol align="center">S-A</ttcol>
+<ttcol align="center">SRP</ttcol>
+<ttcol align="center">SRA</ttcol>
+
+<c>SUBSCRIBE-XFR</c><c></c><c></c><c></c><c></c><c></c>
+<c>DSO-IXFR</c><c></c><c>X</c><c></c><c></c><c></c>
+<c>DSO-AXFR</c><c></c><c>X</c><c></c><c></c><c></c>
+<c>UNSUBSCRIBE-XFR</c><c></c><c></c><c></c><c></c><c></c>
+</texttable>
+<t>Table 3: DSO TLV Server Context Summary
+</t>
+</section>
+</section>
+
+<section anchor="iana-considerations" title="IANA Considerations">
+<t>This document also defines four new DNS Stateful Operation TLV types to be
+recorded in the IANA DSO Type Code Registry.
+</t>
+<texttable>
+<ttcol align="center">Name</ttcol>
+<ttcol align="center">Value</ttcol>
+<ttcol align="center">Early Data</ttcol>
+<ttcol align="center">Status</ttcol>
+<ttcol align="center">Definition</ttcol>
+
+<c>SUBSCRIBE-XFR</c><c>TBA (0x50)</c><c>NO</c><c>Standards Track</c><c>Section 7.1</c>
+<c>DSO-IXFR</c><c>TBA (0x51)</c><c>NA</c><c>Standards Track</c><c>Section 7.1</c>
+<c>DSO-AXFR</c><c>TBA (0x51)</c><c>NA</c><c>Standards Track</c><c>Section 7.2</c>
+<c>UNSUBSCRIBE-XFR</c><c>TBA (0x52)</c><c>NA</c><c>Standards Track</c><c>Section 7.2</c>
+</texttable>
+<t>Table 5: IANA DSO TLV Type Code Assignment
+</t>
 </section>
 
 <section anchor="implementation-considerations" title="Implementation Considerations">
@@ -551,7 +813,7 @@ the client in subsequent DSO-IXFR messages.
 </t>
 </section>
 
-<section anchor="iana-considerations" title="IANA Considerations">
+<section anchor="iana-considerations-1" title="IANA Considerations">
 <t>TBD
 </t>
 </section>
@@ -598,6 +860,8 @@ responses on a given connection) to hide the zone size?</t>
 <?rfc include="https://xml2rfc.tools.ietf.org/public/rfc/bibxml/reference.RFC.8499.xml"?>
 </references>
 <references title="Informative References">
+<?rfc include="https://xml2rfc.tools.ietf.org/public/rfc/bibxml/reference.RFC.1995.xml"?>
+<?rfc include="https://xml2rfc.tools.ietf.org/public/rfc/bibxml/reference.RFC.5936.xml"?>
 <?rfc include="https://xml2rfc.tools.ietf.org/public/rfc/bibxml/reference.RFC.8490.xml"?>
 </references>
 
