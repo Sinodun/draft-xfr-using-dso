@@ -2,7 +2,7 @@
     Title = "DNS Zone Transfer using DNS Stateful Operations"
     abbrev = "XFR-using-DSO"
     category = "std"
-    docName= "draft-zatda-dprive-xfr-using-dso-00"
+    docName= "draft-zatda-dprive-xfr-using-dso-01"
     ipr = "trust200902"
     area = "Internet"
     workgroup = "dprive"
@@ -76,7 +76,7 @@ DNS zone transfers are transmitted in clear text, which gives attackers the
 opportunity to collect the content of a zone by eavesdropping on network
 connections. This document specifies use of DNS Stateful Operations to enable a
 subscribe/publish mechanism for zone transfers reducing the over head introduced
-by NOTITY/SOA interactions prior to zone transfer request. This additionally
+by NOTIFY/SOA interactions prior to zone transfer request. This additionally
 prevents zone contents collection via passive monitoring of zone transfers
 by restricting XFR using DSO to require TLS.
 
@@ -105,10 +105,10 @@ client and server, the client can then subscribe to one or more zones to be
 notified of changes and the server can publish changes to the zone over the
 connection. Clients can choose to unsubscribe from zone updates at any time. 
 
-Servers could also use the DSO session to send command-style messages to the
-client, for example, to instruct a client to stop serving a zone or delete a
-zone. No such commands are defined in this version of the specification, but
-will likely be added in a future version.
+Primaries could also use the DSO session to send command-style messages to
+secondaries, for example, to instruct a secondary to stop serving a zone or
+delete a zone. No such commands are defined in this version of the
+specification, but will likely be added in a future version.
 
 # Terminology
 
@@ -126,7 +126,7 @@ for two servers engaged in zone transfers.
 
 DoT: DNS-over-TLS as specified in [@!RFC7858]
 
-XuD: XFR-using-DOS mechanisms as specified in this document
+XuD: XFR-using-DSO mechanisms as specified in this document
 
 # Use Cases for XFR-using-DSO
 
@@ -164,6 +164,8 @@ This section includes additional use cases in addition to those specified in [@!
 QUESTION: Is there any case where the primary might want to initiate the DSO
 connection to the secondary?
 
+FEEDBACK: 1) Yes, because this is a much more efficient mechanism with potentially new features. 2) Multiple masters behind the same load balancer could use TCP but client shouldn't assume state of master since same IP could connect to a different instance (also applies to XuD).
+
 # Overview
 
 The figure below provides an outline of the XuD protocol.
@@ -190,6 +192,8 @@ for which it supports XuD subscriptions, it MUST also support standard queries.
 XuD imposes less load on the responding server than rapid polling would, but XuD
 notifications do still have a cost, so XuD clients MUST only create XuD
 subscriptions for zones they are authorised to transfer.
+
+TODO: Clarify authorisation.
 
 Generally, as described in the DNS Stateful Operations specification [RFC8490],
 a client must not keep a session to a server open indefinitely if it has no
@@ -345,6 +349,8 @@ and SOA value. Since SUBSCRIBE-XFR requests are sent over TCP, multiple
 SUBSCRIBE-XFR DSO request messages can be concatenated in a single TCP stream
 and packed efficiently into TCP segments.
 
+TODO: Only keep the previous sentence if a TCP use case is proposed and qualify that this is difficult with TLS.
+
 If accepted, the subscription will stay in effect until the client cancels
 the subscription using UNSUBSCRIBE-XFR or until the DSO session between the
 client and the server is closed.
@@ -366,6 +372,8 @@ DNS wildcarding is not supported. SUBSCRIBE-XFR requests received for zones
 containing wildcards are considered an error (see below).
 
 A CLASS of 'ANY' (255) is not supported.
+
+QUESTION: Should we allow multiple zones in one REQUEST-XFR? I think it makes unsubscribing much more complicate for not a lot of efficiency gain....
 
 ###  SUBSCRIBE-XFR Response
 
@@ -520,6 +528,8 @@ this to generate the DSO-IXFR messages sent on a XuD session.
 
 ###  DSO-IXFR Message
 
+QUESTION: Should we rename this PUSH-IXFR
+
 A DSO-IXFR unidirectional message begins with the standard DSO 12-byte header
 [RFC8490], followed by the DSO-IXFR primary TLV. A DSO-IXFR message is
 illustrated in Figure 4.
@@ -587,7 +597,10 @@ usual established DNS case-insensitivity for US-ASCII letters.
 
 The format of the DSO-AXFR message is a standard DSO header with DSO-TYPE of
 DSO-AXFR (tentatively DSO Type Code 0x52) and the body is identical to a
-[@RFC5936] AXFR response body.
+[@RFC5936] AXFR response body. It is unidirectional message that requires no
+response.
+
+Clients must not send a DSO-AXFR.
 
 TODO: More detail here.
 
@@ -601,6 +614,29 @@ QUESTION: Should we bother with a separate DSO-AXFR message or just allow full
 zone transfer inside the DSO-IXFR message as with [@RFC1995] IXFR? A separate
 message type makes is more explicit and IXFR was constrained by having to
 respond to a IXFR request.
+
+#### Request a full DSO-AXFR during a XuD session
+
+QUESTION: Should we create messages that allow a client to interrupt a XuD
+session and request a full AXFR?
+
+This can be done with an unsubscribe, regular AXFR and then resubscribe all on
+one session, but should we create a new specific message for this.
+
+### DSO-IXFR from a different SOA
+
+QUESTION: Should there be a mechanism where a secondary can tell a primary to
+restart IXFR from a different SOA than current in use?
+
+### SOA Refresh Timer
+
+What should happen if the SOA refresh timer expires before a subsequent DSO-IXR occurs?
+
+Should the client send a regular SOA to check it is in sync so it could subscribe/unsubscribe or should there more a more elegant option?
+
+### IXFR and AXFR request messages on a XuD session
+
+TODO: Document if these are allowed and if they are what the server should do...
 
 ##  XuD UNSUBSCRIBE-XFR
 
